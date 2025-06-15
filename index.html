@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gym Workout Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    .set-box { margin-bottom: 10px; }
+  </style>
+</head>
+<body class="bg-light">
+  <div class="container py-5">
+    <h1 class="mb-4 text-center">🏋️ Gym Workout Tracker</h1>
+
+    <!-- Add Workout Section -->
+    <div class="card mb-4">
+      <div class="card-body">
+        <h5 class="card-title">Add Workout</h5>
+
+        <div class="mb-3">
+          <label for="workoutDate" class="form-label">Date</label>
+          <input type="date" class="form-control" id="workoutDate" />
+        </div>
+
+        <div class="mb-3">
+          <label for="splitSelect" class="form-label">Muscle Group Split</label>
+          <select class="form-select" id="splitSelect">
+            <option value="Chest-Triceps">Chest + Triceps</option>
+            <option value="Back-Biceps">Back + Biceps</option>
+            <option value="Shoulders-Legs">Shoulders + Legs</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label for="exerciseCount" class="form-label">How many exercises?</label>
+          <input type="number" class="form-control" id="exerciseCount" min="1" max="10" />
+        </div>
+
+        <button class="btn btn-primary" onclick="generateExerciseFields()">Generate Exercise Fields</button>
+      </div>
+    </div>
+
+    <!-- Dynamic Exercise Fields -->
+    <div id="exerciseFields" class="mb-4"></div>
+
+    <!-- Save Button -->
+    <button class="btn btn-success mb-4" onclick="saveWorkout()">✅ Save Workout</button>
+    <button class="btn btn-secondary mb-4" onclick="downloadWorkoutData()">⬇️ Download Data</button>
+    <input type="file" class="form-control mb-4" accept=".json" onchange="uploadWorkoutData(event)" />
+
+    <!-- Preview Section -->
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">Workout Preview</h5>
+        <div class="mb-3">
+          <label for="filterDate" class="form-label">Filter by Date</label>
+          <input type="date" class="form-control" id="filterDate" oninput="filterWorkouts()" />
+        </div>
+        <table class="table table-bordered">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Split</th>
+              <th>Exercise</th>
+              <th>Set 1</th>
+              <th>Set 2</th>
+              <th>Set 3</th>
+            </tr>
+          </thead>
+          <tbody id="workoutTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const exercises = {
+  "Chest-Triceps": [
+    "Bench Press",
+    "Incline Bench Press",
+    "Decline Bench Press",
+    "Dumbbell Fly",
+    "Cable Crossover",
+    "Push-Ups",
+    "Pec Deck Machine",
+    "Triceps Pushdown",
+    "Overhead Triceps Extension",
+    "Close-Grip Bench Press",
+    "Skull Crushers",
+    "Diamond Push-Ups",
+    "Triceps Kickback",
+    "Reverse Grip Triceps Pushdown"
+  ],
+  "Back-Biceps": [
+    "Lat Pulldown",
+    "Pull-Ups",
+    "Chin-Ups",
+    "Barbell Row",
+    "Dumbbell Row",
+    "T-Bar Row",
+    "Seated Cable Row",
+    "Deadlift",
+    "Face Pull",
+    "Reverse Fly",
+    "Hyperextensions",
+    "Barbell Curl",
+    "Dumbbell Curl",
+    "Hammer Curl",
+    "Concentration Curl",
+    "Preacher Curl",
+    "EZ Bar Curl",
+    "Cable Curl",
+    "Reverse Curl"
+  ],
+  "Shoulders-Legs": [
+    "Overhead Press",
+    "Arnold Press",
+    "Lateral Raise",
+    "Front Raise",
+    "Rear Delt Fly",
+    "Upright Row",
+    "Shrugs",
+    "Face Pull",
+    "Squats",
+    "Front Squats",
+    "Goblet Squats",
+    "Leg Press",
+    "Lunges",
+    "Step-Ups",
+    "Leg Extensions",
+    "Leg Curls",
+    "Romanian Deadlift",
+    "Stiff-Legged Deadlift",
+    "Calf Raises",
+    "Hip Thrusts",
+    "Glute Bridges"
+  ]
+};
+
+    function generateExerciseFields() {
+      const count = document.getElementById("exerciseCount").value;
+      const split = document.getElementById("splitSelect").value;
+      const container = document.getElementById("exerciseFields");
+      container.innerHTML = "";
+
+      for (let i = 0; i < count; i++) {
+        const div = document.createElement("div");
+        div.classList.add("card", "mb-3", "p-3");
+        div.innerHTML = `
+          <h6>Exercise ${i + 1}</h6>
+          <div class="mb-2">
+            <label>Exercise</label>
+            <select class="form-select" name="exercise">
+              ${exercises[split].map(ex => `<option value="${ex}">${ex}</option>`).join("")}
+            </select>
+          </div>
+          <div class="row">
+            ${[1, 2, 3].map(set => `
+              <div class="col-4">
+                <div class="set-box">
+                  <label>Set ${set}</label>
+                  <input class="form-control" placeholder="Reps x Weight" name="set${set}" />
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        `;
+        container.appendChild(div);
+      }
+    }
+
+    function saveWorkout() {
+      const date = document.getElementById("workoutDate").value;
+      const split = document.getElementById("splitSelect").value;
+      const cards = document.querySelectorAll("#exerciseFields .card");
+      const workouts = [];
+
+      cards.forEach(card => {
+        const exercise = card.querySelector("select[name='exercise']").value;
+        const set1 = card.querySelector("input[name='set1']").value;
+        const set2 = card.querySelector("input[name='set2']").value;
+        const set3 = card.querySelector("input[name='set3']").value;
+        workouts.push({ date, split, exercise, set1, set2, set3 });
+      });
+
+      const existing = JSON.parse(localStorage.getItem("workouts") || "[]");
+      localStorage.setItem("workouts", JSON.stringify([...existing, ...workouts]));
+      alert("Workout saved!");
+      filterWorkouts();
+    }
+
+    function filterWorkouts() {
+      const filterDate = document.getElementById("filterDate").value;
+      const data = JSON.parse(localStorage.getItem("workouts") || "[]");
+      const tbody = document.getElementById("workoutTable");
+      tbody.innerHTML = "";
+      data.filter(entry => !filterDate || entry.date === filterDate)
+        .forEach(entry => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td>${entry.date}</td>
+            <td>${entry.split}</td>
+            <td>${entry.exercise}</td>
+            <td>${entry.set1}</td>
+            <td>${entry.set2}</td>
+            <td>${entry.set3}</td>
+          `;
+          tbody.appendChild(row);
+        });
+    }
+
+    function downloadWorkoutData() {
+      const data = localStorage.getItem("workouts") || "[]";
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'workouts.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function uploadWorkoutData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const uploadedData = JSON.parse(e.target.result);
+          const existing = JSON.parse(localStorage.getItem("workouts") || "[]");
+          localStorage.setItem("workouts", JSON.stringify([...existing, ...uploadedData]));
+          alert("Data uploaded successfully!");
+          filterWorkouts();
+        } catch (err) {
+          alert("Invalid file format.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // Auto-fill today's date
+    document.getElementById("workoutDate").valueAsDate = new Date();
+  </script>
+</body>
+</html>
