@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workout Detail Analysis</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+  <div class="container py-5">
+    <h2 class="text-center mb-4">📊 Detailed Workout Analysis</h2>
+
+    <div class="card mb-4 p-3">
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label">Filter by Start Date</label>
+          <input type="date" id="startDate" class="form-control" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Filter by End Date</label>
+          <input type="date" id="endDate" class="form-control" />
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Filter by Split</label>
+          <select id="splitFilter" class="form-select">
+            <option value="">All</option>
+            <option value="Chest-Triceps">Chest + Triceps</option>
+            <option value="Back-Biceps">Back + Biceps</option>
+            <option value="Shoulders-Legs">Shoulders + Legs</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary mt-3" onclick="analyzeData()">Analyze</button>
+      <a href="index.html"><button class="btn btn-danger mt-3">Back</button></a>
+    </div>
+
+    <div class="row">
+      <div class="col-md-6">
+        <canvas id="workoutFrequencyChart"></canvas>
+      </div>
+      <div class="col-md-6">
+        <canvas id="exerciseDistributionChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function analyzeData() {
+      const start = new Date(document.getElementById("startDate").value);
+      const end = new Date(document.getElementById("endDate").value);
+      const split = document.getElementById("splitFilter").value;
+      const rawData = JSON.parse(localStorage.getItem("workouts") || "[]");
+
+      const filtered = rawData.filter(w => {
+        const date = new Date(w.date);
+        const withinDate = (!isNaN(start) ? date >= start : true) && (!isNaN(end) ? date <= end : true);
+        const matchesSplit = split ? w.split === split : true;
+        return withinDate && matchesSplit;
+      });
+
+      const weekly = {};
+      const exerciseCount = {};
+
+      filtered.forEach(w => {
+        const week = new Date(w.date);
+        const weekKey = `${week.getFullYear()}-W${getWeekNumber(week)}`;
+        weekly[weekKey] = (weekly[weekKey] || 0) + 1;
+
+        exerciseCount[w.exercise] = (exerciseCount[w.exercise] || 0) + 1;
+      });
+
+      renderBarChart(weekly);
+      renderPieChart(exerciseCount);
+    }
+
+    function getWeekNumber(d) {
+      d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+      const dayNum = d.getUTCDay() || 7;
+      d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+      return Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+    }
+
+    let freqChart, pieChart;
+
+    function renderBarChart(data) {
+      const ctx = document.getElementById("workoutFrequencyChart").getContext("2d");
+      if (freqChart) freqChart.destroy();
+      freqChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(data),
+          datasets: [{
+            label: 'Workouts Per Week',
+            data: Object.values(data),
+            backgroundColor: 'rgba(54, 162, 235, 0.6)'
+          }]
+        }
+      });
+    }
+
+    function renderPieChart(data) {
+      const ctx = document.getElementById("exerciseDistributionChart").getContext("2d");
+      if (pieChart) pieChart.destroy();
+      pieChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: Object.keys(data),
+          datasets: [{
+            label: 'Exercise Distribution',
+            data: Object.values(data),
+            backgroundColor: [
+              '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#C9CBCF'
+            ]
+          }]
+        }
+      });
+    }
+  </script>
+</body>
+</html>
